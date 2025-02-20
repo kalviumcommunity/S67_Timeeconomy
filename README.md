@@ -26,3 +26,6 @@ Background Jobs: Schedule tasks using libraries like node-cron or built-in OS fe
 6. Screen Lock & Restrictions
 Android/iOS Device Management APIs: Enforce screen lock restrictions during timer sessions.
 Electron.js: Build a desktop version with screen time restrictions.
+
+
+Deployed link in Netlify.  [https://assapvijay.netlify.app/]
