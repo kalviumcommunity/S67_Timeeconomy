@@ -27,5 +27,10 @@ Background Jobs: Schedule tasks using libraries like node-cron or built-in OS fe
 Android/iOS Device Management APIs: Enforce screen lock restrictions during timer sessions.
 Electron.js: Build a desktop version with screen time restrictions.
 
+    <!-- **created card rendering :** In this assignment I created a quotes.jsx which is a card component that renders in the landing page.jsx where the source of the quote and the qoute is displayed. -->
+
+    created a card rendering : In thsi assignment i created a sample.jsx which is a card component the renders in the timecard.jsx where the source of the duration and time are displayed.
 
 Deployed link in Netlify.  [https://assapvijay.netlify.app/]
+
+
