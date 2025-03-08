@@ -12,9 +12,6 @@ const port = process.env.PORT || 8080;
 const url = process.env.db_url;
 console.log(url);
 
-app.get('/', (req, res) => {    
-    res.send('pong');
-});
 
 app.use("/main", router);
 

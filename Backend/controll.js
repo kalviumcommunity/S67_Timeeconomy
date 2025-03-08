@@ -29,6 +29,17 @@ router.post('/create', async (req, res) => {
   }
 });
 
+router.post("/entities", async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    const newEntity = new Entity({ name, description });
+    await newEntity.save();
+    res.status(201).json(newEntity);
+  } catch (error) {
+    res.status(500).json({ error: "Error adding entity" });
+  }
+});
+
 router.get('/fetch', async (req, res) => {
   try {
     const dataItem = await dataItems.find();
