@@ -95,6 +95,39 @@ router.put('/update/:id', async (req, res) => {
   }
 });
 
+router.put('/main/:id', async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    
+    const updatedEntity = await Entity.findByIdAndUpdate(
+      req.params.id,
+      { name, description },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedEntity) {
+      return res.status(404).json({ success: false, message: 'Entity not found' });
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Entity updated successfully',
+      data: updatedEntity,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error updating entity', error: error.message });
+  }
+  });
+
+  router.delete('/main/:id', async (req, res) => {
+    try{
+      await Entity.findByIdAndDelete(req.params.id);
+      res.status(200).json({ success: true, message: 'Entity deleted successfully' });  
+    }
+    catch(error){
+      res.status(500).json({ success: false, message: 'Error deleting entity', error: error.message });
+    }
+  });
+
 router.delete('/del/:id', async (req, res) => {
   try {
     const daleteDataItems = await dataItems.findByIdAndDelete(req.params.id);
