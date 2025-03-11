@@ -34,7 +34,7 @@ const Addentity =() => {
         try {
           if (edit) {
               
-              await axios.put(`http://localhost:3000/main/${editId}`, data);
+              await axios.put(`http://localhost:3000/main/${edit}`, data);
               setEntities((prev) =>
                   prev.map((entity) => (entity._id === edit ? { ...entity, ...data } : entity))
               );
