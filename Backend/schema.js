@@ -7,8 +7,8 @@ const dataRequired = new mongoose.Schema({
     description: {
       type: String
     },
-    price: {
-      type: Number,
+    time: {
+      type: Date,
       required: [true, 'price is required']
     }
   });
