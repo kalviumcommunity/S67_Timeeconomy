@@ -1,20 +1,29 @@
 const express = require('express');
+const {body, validationResult} = require('express-validator');
 const dataItems = require('./schema');
 
 
 const router = express.Router();
 
-router.post('/create', async (req, res) => {
+router.post('/create',[
+  body('name').notEmpty().withMessage('Please enter the name for the data item'),
+  body('time').isFloat({gt: 0}).withMessage('Please enter the time for the data item'),
+  body('description').optional().isString().withMessage('Please enter a valid description for the data item')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+    }
   try {
-    const { name, description, price } = req.body;
-    if (!name || !price) {
+    const { name, description, time } = req.body;
+    if (!name || !time) {
       return res.status(400).json({
         success: false,
         message: 'Name are required',
       });
     }
 
-    const newDataItem = await dataItems.create({ name, description, price });
+    const newDataItem = await dataItems.create({ name, description, time });
     res.status(201).json({
       success: true,
       message: 'New created successfully',
@@ -29,7 +38,14 @@ router.post('/create', async (req, res) => {
   }
 });
 
-router.post("/entities", async (req, res) => {
+router.post("/entities",[
+  body('name').notEmpty().withMessage('Please enter the name for the data item'),
+  body('description').optional().isString().withMessage('Please enter a valid description for the data item')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
   try {
     const { name, description } = req.body;
     const newEntity = new Entity({ name, description });
@@ -67,17 +83,17 @@ const getItem = router.get('/fetch', async (req, res) => {
 
 router.put('/update/:id', async (req, res) => {
   try {
-    const { name, description, price } = req.body;
-    if (name === '' || price === '') {
+    const { name, description, time } = req.body;
+    if (name === '' || time === '') {
       return res.status(400).json({
         success: false,
-        message: 'Name and Price cannot be empty',
+        message: 'Name and time cannot be empty',
       });
     }
 
     const updatedDataItem = await dataItems.findByIdAndUpdate(
       req.params.id,
-      { name, description, price },
+      { name, description, time },
       { new: true, runValidators: true }
     );
 
