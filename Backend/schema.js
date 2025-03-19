@@ -10,7 +10,12 @@ const dataRequired = new mongoose.Schema({
     time: {
       type: Date,
       required: [true, 'price is required']
-    }
+    },
+    createdBy:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'user',
+      required: true
+    },
   });
   
   const dataItem = mongoose.model('data', dataRequired);
