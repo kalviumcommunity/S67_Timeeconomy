@@ -1,6 +1,7 @@
 const express = require('express');
 const {body, validationResult} = require('express-validator');
 const dataItems = require('./schema');
+const Entity = require('./schema');
 
 
 const router = express.Router();
@@ -8,7 +9,10 @@ const router = express.Router();
 router.post('/create',[
   body('name').notEmpty().withMessage('Please enter the name for the data item'),
   body('time').isFloat({gt: 0}).withMessage('Please enter the time for the data item'),
-  body('description').optional().isString().withMessage('Please enter a valid description for the data item')
+  body('description').optional().isString().withMessage('Please enter a valid description for the data item'),
+  body('created_by').notEmpty().withMessage('User ID is required')
+  
+
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -59,7 +63,7 @@ router.post("/entities",[
 router.get('/fetch', async (req, res) => {
   try {
     const dataItem = await dataItems.find();
-    res.status(200).json({ success: true, data: dataItems });
+    res.status(200).json({ success: true, data: dataItem });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -70,42 +74,45 @@ router.get('/fetch', async (req, res) => {
 });
 
 
-const getItem = router.get('/fetch', async (req, res) => {
+ router.get('/fetch/user/:userid', async (req, res) => {
   try{
-    const dataItem = await dataItem.find();
-    console.log(dataItems);
-    res.status(200).json({ success: true, data: dataItems });
+    const {userid} = req.params;
+    const userEntities = await Entity.find({created_by: userid});
+    res.status(200).json({ success: true, data: userEntities });
+  }catch(error){
+    res.status(500).json({ success: false, message: 'Error fetching user entities', error: error.message });
+
   }
-  catch(error){
-    res.status(500).json({ success: false, message: 'Error fetching the data', error: error.message });
-  }
-});
+})
 
 router.put('/update/:id', async (req, res) => {
   try {
     const { name, description, time } = req.body;
-    if (name === '' || time === '') {
-      return res.status(400).json({
-        success: false,
-        message: 'Name and time cannot be empty',
-      });
+    const updateFields = {};
+
+    if (name) updateFields.name = name;
+    if (description) updateFields.description = description;
+    if (time) updateFields.time = time;
+
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields provided for update' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid data item ID' });
     }
 
     const updatedDataItem = await dataItems.findByIdAndUpdate(
       req.params.id,
-      { name, description, time },
+      updateFields,
       { new: true, runValidators: true }
     );
 
-    if (!updatedMenuItem) {
+    if (!updatedDataItem) {
       return res.status(404).json({ success: false, message: 'Data item not found' });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Data item updated successfully',
-      data: updatedDataItem,
-    });
+    res.status(200).json({ success: true, message: 'Data item updated successfully', data: updatedDataItem });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error updating data item', error: error.message });
   }
@@ -144,16 +151,17 @@ router.put('/main/:id', async (req, res) => {
     }
   });
 
-router.delete('/del/:id', async (req, res) => {
-  try {
-    const daleteDataItems = await dataItems.findByIdAndDelete(req.params.id);
-    if (!daleteDataItems) {
-      return res.status(404).json({ success: false, message: 'Data item not found' });
+  router.delete('/del/:id', async (req, res) => {
+    try {
+      const deletedDataItem = await dataItems.findByIdAndDelete(req.params.id);
+      if (!deletedDataItem) {
+        return res.status(404).json({ success: false, message: 'Data item not found' });
+      }
+      res.status(200).json({ success: true, message: 'Data item deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error deleting data item', error: error.message });
     }
-    res.status(200).json({ success: true, message: 'data item deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Error deleting Data item', error: error.message });
-  }
-});
+  });
+  
 
 module.exports = router
