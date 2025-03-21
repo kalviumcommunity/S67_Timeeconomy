@@ -11,7 +11,7 @@ const dataRequired = new mongoose.Schema({
       type: Date,
       required: [true, 'price is required']
     },
-    createdBy:{
+    created_By:{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'user',
       required: true

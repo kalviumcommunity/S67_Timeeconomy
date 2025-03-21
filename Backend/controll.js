@@ -1,7 +1,8 @@
 const express = require('express');
 const {body, validationResult} = require('express-validator');
-const dataItems = require('./schema');
-const Entity = require('./schema');
+// const dataItems = require('./schema');
+// const Entity = require('./schema');
+const pool = require('./db');
 
 
 const router = express.Router();
@@ -20,26 +21,15 @@ router.post('/create',[
     }
   try {
     const { name, description, time } = req.body;
-    if (!name || !time) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name are required',
-      });
-    }
-
-    const newDataItem = await dataItems.create({ name, description, time });
-    res.status(201).json({
-      success: true,
-      message: 'New created successfully',
-      data: newDataItem,
-    });
+    const [result] = await pool.execute(
+      "INSERT INTO data_items (name, description, time, created_by) VALUES (?, ?, ?, ?)",
+      [name, description, time, created_by]
+    );
+    res.status(201).json({ success: true, message: "Created successfully", id: result.insertId });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error creating data',
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error creating data", error: error.message });
   }
+
 });
 
 router.post("/entities",[
