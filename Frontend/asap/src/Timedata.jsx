@@ -3,42 +3,25 @@ import axios from 'axios';
 import Timecard from './Components/Timecard';
 
 function TimeData() {
-  // {
-    //   id: 1,
-    //   title: "Study Session",
-    //   duration: "2 hours",
-    //   description: "Focusing on Data Structures & Algorithms",
-    // },
-    // {
-    //   id: 2,
-    //   title: "Exercise",
-    //   duration: "1 hour",
-    //   description: "Morning workout session",
-    // },
-    // {
-    //   id: 3,
-    //   title: "Break",
-    //   duration: "30 minutes",
-    //   description: "Relax and refresh",
-    // },
   const [data, setData] = useState([]);
+  const [users, setUsers] = useState([]); // Store list of users
+  const [selectedUser, setSelectedUser] = useState(""); // Track selected user
 
+  // Fetch users when component mounts
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get('http://localhost:3000/main/fetch');
-        if (response.data) {
-          setData(response.data);
-        } else {
-          console.log('There was an error fetching data');
-        }
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      }
-    };
-
-    fetchData();
+    axios.get('http://localhost:3000/users')
+      .then(response => setUsers(response.data))
+      .catch(error => console.error('Error fetching users:', error));
   }, []);
+
+  // Fetch data items based on selected user
+  useEffect(() => {
+    if (selectedUser) {
+      axios.get(`http://localhost:3000/main/fetch?created_by=${selectedUser}`)
+        .then(response => setData(response.data))
+        .catch(err => console.error('Error fetching data:', err));
+    }
+  }, [selectedUser]);
 
   return (
     <>
@@ -48,6 +31,16 @@ function TimeData() {
         it extremely hilarious how people use this app and grow in their life
         and career.
       </p>
+
+      {/* User Dropdown */}
+      <label>Select User: </label>
+      <select onChange={(e) => setSelectedUser(e.target.value)}>
+        <option value="">-- Choose a User --</option>
+        {users.map(user => (
+          <option key={user.id} value={user.id}>{user.username}</option>
+        ))}
+      </select>
+
       <div>
         <br />
         <h3>Here are some ideas</h3>

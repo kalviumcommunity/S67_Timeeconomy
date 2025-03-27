@@ -7,6 +7,20 @@ const pool = require('./db');
 
 const router = express.Router();
 
+router.get('/fetch/user/:userid', async (req, res) => {
+  try {
+      const { userid } = req.params;
+      const [userEntities] = await pool.execute(
+          "SELECT * FROM data_items WHERE created_by = ?",
+          [userid]
+      );
+      res.status(200).json({ success: true, data: userEntities });
+  } catch (error) {
+      res.status(500).json({ success: false, message: 'Error fetching user entities', error: error.message });
+  }
+});
+
+
 router.post('/create',[
   body('name').notEmpty().withMessage('Please enter the name for the data item'),
   body('time').isFloat({gt: 0}).withMessage('Please enter the time for the data item'),
