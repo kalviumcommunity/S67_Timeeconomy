@@ -1,51 +1,33 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const pool = require('./schema');
+const pool = require('./schema'); 
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
+require('dotenv').config(); 
 
 const router = express.Router();
+
+const generateToken = (user) => {
+  return jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
+    expiresIn: '1h'
+  });
+};
 
 router.use(cookieParser());
 router.use(
   session({
-    secret: 'your_secret_key', 
+    secret: process.env.SESSION_SECRET || 'default_secret_key',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false, httpOnly: true }, 
+    cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true },
   })
 );
 
-router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-  const sql = "SELECT * FROM users WHERE username = ?";
-
-  db.query(sql, [username], async (err, results) => {
-      if (err) return res.status(500).json({ error: "Database error" });
-      if (results.length === 0) return res.status(401).json({ error: "Invalid credentials" });
-
-      const user = results[0];
-      const passwordMatch = await bcrypt.compare(password, user.password);
-      
-      if (!passwordMatch) return res.status(401).json({ error: "Invalid credentials" });
-
-      const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: "1h" });
-
-      res.cookie("authToken", token, { httpOnly: true, secure: false });
-      res.json({ message: "Login successful", user: { id: user.id, username: user.username } });
-  });
-});
-
-// Logout Route
-router.post("/logout", (req, res) => {
-  res.clearCookie("authToken");
-  res.json({ message: "Logout successful" });
-});
-
-
-router.post('/auth/login', [
+router.post('/register', [
   body('username').notEmpty().withMessage('Username is required'),
-  body('password').notEmpty().withMessage('Password is required')
+  body('password').notEmpty().withMessage('Password is required').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -54,36 +36,65 @@ router.post('/auth/login', [
 
   try {
     const { username, password } = req.body;
-    const [user] = await pool.execute(
-      "SELECT * FROM users WHERE username = ? AND password = ?",
-      [username, password]
-    );
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (user.length === 0) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
-    }
+    await pool.execute("INSERT INTO users (username, password) VALUES (?, ?)", [username, hashedPassword]);
 
-    req.session.username = username;
-    res.cookie('username', username, { httpOnly: true });
-    res.status(200).json({ success: true, message: "Logged in successfully" });
-
+    res.status(201).json({ success: true, message: "User registered successfully" });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error logging in", error: error.message });
+    res.status(500).json({ success: false, message: "Error registering user", error: error.message });
   }
 });
 
-router.post('/auth/logout', (req, res) => {
-  res.clearCookie('username');
+router.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const [users] = await pool.execute("SELECT * FROM users WHERE username = ?", [username]);
+
+    if (users.length === 0) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const user = users[0];
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const token = generateToken(user);
+
+    res.cookie("authToken", token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    res.json({ message: "Login successful", user: { id: user.id, username: user.username } });
+  } catch (error) {
+    res.status(500).json({ error: "Database error", details: error.message });
+  }
+});
+
+router.post("/logout", (req, res) => {
+  res.clearCookie("authToken");
   req.session.destroy((err) => {
     if (err) {
       return res.status(500).json({ success: false, message: "Error logging out" });
     }
-    res.status(200).json({ success: true, message: "Logged out successfully" });
+    res.json({ message: "Logout successful" });
   });
 });
 
+const authenticateToken = (req, res, next) => {
+  const token = req.cookies.authToken;
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-router.get('/fetch/user/:userid', async (req, res) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Invalid token" });
+
+    req.user = user;
+    next();
+  });
+};
+
+router.get('/fetch/user/:userid', authenticateToken, async (req, res) => {
   try {
     const { userid } = req.params;
     const [userEntities] = await pool.execute(
@@ -101,7 +112,7 @@ router.post('/create', [
   body('time').isFloat({ gt: 0 }).withMessage('Please enter a valid time'),
   body('description').optional().isString(),
   body('created_by').notEmpty().withMessage('User ID is required')
-], async (req, res) => {
+], authenticateToken, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(422).json({ errors: errors.array() });
@@ -119,7 +130,7 @@ router.post('/create', [
   }
 });
 
-router.put('/update/:id', async (req, res) => {
+router.put('/update/:id', authenticateToken, async (req, res) => {
   try {
     const { name, description, time } = req.body;
     const { id } = req.params;
@@ -139,7 +150,7 @@ router.put('/update/:id', async (req, res) => {
   }
 });
 
-router.delete('/del/:id', async (req, res) => {
+router.delete('/del/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const [result] = await pool.execute("DELETE FROM data_items WHERE id = ?", [id]);

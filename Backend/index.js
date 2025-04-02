@@ -6,11 +6,13 @@ const app = express();
 const dotenv = require('dotenv');
 dotenv.config();
 
-app.use(cors());
+app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
 app.use(express.json());
 const port = process.env.PORT || 8080;
 const url = process.env.db_url;
 console.log(url);
+
+app.use(cookieParser());
 
 
 app.use("/main", router);
